@@ -1,0 +1,4 @@
+pybnc
+=====
+
+Python IRC Bouncer
