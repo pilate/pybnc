@@ -23,16 +23,15 @@ class IRCExchanger(asyncore.dispatcher):
         self.do_connect()
 
     def buffer_string(self, string):
-        self.buffer += string + "\n"
+        self.buffer += string + "\r\n"
 
     # Establish connection to server
     def do_connect(self):
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect((self.settings["server"], self.settings["port"]))
 
-    # Should register an IRC connection 
+    # Register user with server
     def handle_connect(self):
-        print "handle_connect"
         if "pass" in self.settings:
             pass_cmd = "PASS {0}".format(self.settings["pass"])
             self.buffer_string(pass_cmd)
@@ -42,7 +41,6 @@ class IRCExchanger(asyncore.dispatcher):
         self.buffer_string(user_cmd)
 
     def handle_close(self):
-        print "handle_close"
         self.close()
 
     def handle_line(self, line):
@@ -52,8 +50,8 @@ class IRCExchanger(asyncore.dispatcher):
             self.buffer_string(pong_cmd)
 
     def handle_read(self):
-        data = self.recv(8192)
-        for line in data.split("\n"):
+        data = self.recv(10240)
+        for line in data.split("\r\n"):
             self.handle_line(line)
 
     def writable(self):
@@ -64,18 +62,20 @@ class IRCExchanger(asyncore.dispatcher):
         self.buffer = self.buffer[sent:]
 
 settings = {
-    "server": "irc.servercentral.net",
-    "port": 6667,
-    "nick": "testbot123",
-    "user": "testuser",
-    "real_name": "testy mctesterson"
+    "test1": {
+        "server": "irc.servercentral.net",
+        "port": 6667,
+        "nick": "testbot12",
+        "user": "testuser",
+        "real_name": "testy mctesterson"
+    }
 }
-
-client = IRCExchanger(settings)
+clients = []
+for user, settings in settings.iteritems():
+    clients.append(IRCExchanger(settings))
 asyncore.loop()
+
 """
-
-
 class EchoHandler(asyncore.dispatcher_with_send):
 
     def handle_read(self):
