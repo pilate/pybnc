@@ -1,4 +1,4 @@
-from settings import users
+from settings import users, server
 from client import BNCServer
 from exchanger import IRCExchanger
 
@@ -14,12 +14,12 @@ import socket
         b) Proxy input to correct IRCExchanger
 """
 
-
-exchangers = []
-server = BNCServer('0.0.0.0', 9550)
+exchangers = {}
 
 for user, settings in users.iteritems():
-    exchangers.append(IRCExchanger(settings))
+    exchangers[user] = IRCExchanger(settings)
+
+server = BNCServer(users, server, exchangers)
 
 asyncore.loop()
 

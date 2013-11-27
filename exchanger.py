@@ -11,10 +11,12 @@ class IRCExchanger(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self)
         self.settings = settings
         self.buffer = ""
+        self.clients = []
         self.do_connect()
 
     def buffer_string(self, string):
         self.buffer += string + "\n"
+        self.handle_write()
 
     # Establish connection to server
     def do_connect(self):
@@ -35,11 +37,13 @@ class IRCExchanger(asyncore.dispatcher):
         self.close()
 
     def handle_line(self, line):
-        print "Exchanger: {0}".format(line)
         if line[:4] == "PING":
             pong_cmd = line.replace("PING", "PONG")
             print pong_cmd
             self.buffer_string(pong_cmd)
+        else:
+            for client in self.clients:
+                client.send(line)
 
     def handle_read(self):
         data = self.recv(10240)
@@ -54,3 +58,6 @@ class IRCExchanger(asyncore.dispatcher):
     def handle_write(self):
         sent = self.send(self.buffer)
         self.buffer = self.buffer[sent:]
+
+    def register_client(self, client):
+        self.clients.append(client)
