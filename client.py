@@ -23,7 +23,7 @@ class ClientHandler(asyncore.dispatcher_with_send):
         if line[:4] == "USER":
             self.send("001 {nick} :Hey!\n".format(nick="testbot12"))
         for username, exchanger in self.exchangers.iteritems():
-            exchanger.buffer_string(line)
+            exchanger.send_string(line)
 
     def handle_read(self):
         data = self.recv(8192)
