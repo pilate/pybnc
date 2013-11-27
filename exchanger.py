@@ -1,4 +1,5 @@
 import asyncore
+import re
 import socket
 
 
@@ -6,18 +7,21 @@ import socket
     Class responsible for maintaining an IRC connection
 """
 class IRCExchanger(asyncore.dispatcher):
+    irc_re = r'^(:(?P<prefix>\S+) )?(?P<cmd>\S+)( (?!:)(?P<args>.+?))?( :(?P<trail>.+))?$'
 
     def __init__(self, settings):
         asyncore.dispatcher.__init__(self)
         self.settings = settings
-        self.buffer = ""
+        self.recv_buffer = ""
+        self.send_buffer = ""
         self.clients = []
+        self.joins = []
         self.do_connect()
 
     def buffer_string(self, string):
         if string[:4] == "QUIT":
             return
-        self.buffer += string + "\n"
+        self.send_buffer += string + "\n"
         self.handle_write()
 
     # Establish connection to server
@@ -38,28 +42,46 @@ class IRCExchanger(asyncore.dispatcher):
     def handle_close(self):
         self.close()
 
+    def client_send(self, line):
+        for client in self.clients:
+            client.send(line)
+
     def handle_line(self, line):
-        if line[:4] == "PING":
+        match_obj = re.match(self.irc_re, line)
+        match_dict = match_obj.groupdict()
+        match_dict["raw"] = line
+
+        print "From server:", match_dict
+        if match_dict["cmd"] == "PING":
             pong_cmd = line.replace("PING", "PONG")
             print pong_cmd
             self.buffer_string(pong_cmd)
         else:
-            for client in self.clients:
-                client.send(line)
+            if match_dict["cmd"] == "JOIN":
+                self.joins.append(match_dict)
+            self.client_send(line)
 
     def handle_read(self):
-        data = self.recv(10240)
-        if not data:
-            return
-        for line in data.split("\n"):
-            self.handle_line(line)
-
+        self.recv_buffer += self.recv(5120)
+        lines = self.recv_buffer.split("\n")
+        for line in lines[:]:
+            if not line:
+                continue
+            if line[-1] == "\r":
+                lines.remove(line)
+                self.handle_line(line)
+        self.recv_buffer = "\n".join(lines)
+                
     def writable(self):
-        return (len(self.buffer) > 0)
+        return (len(self.send_buffer) > 0)
 
     def handle_write(self):
-        sent = self.send(self.buffer)
-        self.buffer = self.buffer[sent:]
+        sent = self.send(self.send_buffer)
+        self.send_buffer = self.send_buffer[sent:]
 
     def register_client(self, client):
         self.clients.append(client)
+        for join in self.joins:
+            client.send(join["raw"])
+            names_cmd = "NAMES {chan}".format(chan=join["trail"].strip())
+            self.buffer_string(names_cmd)

@@ -18,14 +18,19 @@ class ClientHandler(asyncore.dispatcher_with_send):
         self.out_buffer += data + "\n"
         self.initiate_send()
 
+    def handle_line(self, line):
+        print "From client: {line}".format(line=line)
+        if line[:4] == "USER":
+            self.send("001 {nick} :Hey!\n".format(nick="testbot12"))
+        for username, exchanger in self.exchangers.iteritems():
+            exchanger.buffer_string(line)
+
     def handle_read(self):
         data = self.recv(8192)
         if data:
             for line in data.split("\n"):
-                if line[:4] == "USER":
-                    self.send("001 {nick} :Hey!\n".format(nick="testbot12"))
-                for username, exchanger in self.exchangers.iteritems():
-                    exchanger.buffer_string(line)
+                self.handle_line(line)
+
 
 """
     Async server that delegates to ClientHandler
