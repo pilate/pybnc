@@ -15,6 +15,8 @@ class IRCExchanger(asyncore.dispatcher):
         self.do_connect()
 
     def buffer_string(self, string):
+        if line[:4] == "QUIT":
+            return
         self.buffer += string + "\n"
         self.handle_write()
 
