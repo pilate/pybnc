@@ -39,6 +39,7 @@ class IRCExchanger(asyncore.dispatcher):
 
     # Register user with server after connecting
     def handle_connect(self):
+        print "handle_connect"
         if "pass" in self.settings:
             pass_cmd = "PASS {0}".format(self.settings["pass"])
             self.send_line(pass_cmd)
@@ -48,6 +49,7 @@ class IRCExchanger(asyncore.dispatcher):
         self.send_line(user_cmd)
 
     def handle_close(self):
+        print "handle_close"
         self.close()
 
     # Deals with individual lines from the IRC server

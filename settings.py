@@ -1,6 +1,8 @@
 users = {
     "test1": {
-        "user_password": "testpassword",
+        "bnc": {
+            "password":"testpass"
+        },
         "server": "irc.dal.net",
         "port": 6667,
         "nick": "testbot12",

@@ -21,10 +21,17 @@ class ClientHandler(asyncore.dispatcher_with_send):
 
     def __init__(self, users, exchangers, sock=None):
         asyncore.dispatcher_with_send.__init__(self, sock=sock)
+        self.registered = False
         self.users = users
         self.exchangers = exchangers
-        for username, exchanger in self.exchangers.iteritems():
-            exchanger.register_client(self)
+
+    def login(self, user, password):
+        if user in self.users:
+            if password == self.users[user]["bnc"]["password"]:
+                self.exchanger = self.exchangers[user]
+                self.user = user
+                self.registered = True
+                self.exchanger.register_client(self)
 
     def send_line(self, data):
         self.out_buffer += data + "\n"
@@ -34,10 +41,16 @@ class ClientHandler(asyncore.dispatcher_with_send):
         match_obj = re.match(self.irc_re, line)
         match_dict = match_obj.groupdict()
         match_dict["raw"] = line
-
+        
         print "From client: {line}".format(line=line)
-        for username, exchanger in self.exchangers.iteritems():
-            exchanger.send_line(line)
+        if self.registered:
+            self.exchanger.send_line(line)
+        else:
+            if match_dict["cmd"] == "PASS":
+                pass_split = match_dict["args"].split(":", 2)
+                if len(pass_split) != 2:
+                    return
+                self.login(*pass_split)
 
     def handle_read(self):
         data = self.recv(8192)
@@ -73,3 +86,4 @@ class BNCServer(asyncore.dispatcher):
             sock, addr = pair
             print 'Incoming connection from %s' % repr(addr)
             handler = ClientHandler(self.users, self.exchangers, sock=sock)
+            handler.send_line(":pyBNC NOTICE AUTH :*** Log in with PASS\r")
