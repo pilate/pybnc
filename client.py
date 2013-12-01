@@ -1,29 +1,45 @@
 import asyncore
 import socket
+from functools import wraps
 
+
+def logged_in(f):
+    @wraps(f)
+    def wrapped(self, *args, **kwargs):
+        r = f(self, *args, **kwargs)
+        return r
+    return wrapped
 
 """
     Responsible for client interaction
 """
 class ClientHandler(asyncore.dispatcher_with_send):
 
+    irc_re = r'^(:(?P<prefix>\S+) )?(?P<cmd>\S+)( (?!:)(?P<args>.+?))?( :(?P<trail>.+))?$'
+
     def __init__(self, users, exchangers, sock=None):
         asyncore.dispatcher_with_send.__init__(self, sock=sock)
+        self.registered = False
         self.users = users
         self.exchangers = exchangers
         for username, exchanger in self.exchangers.iteritems():
             exchanger.register_client(self)
 
-    def send(self, data):
+    def send_line(self, data):
         self.out_buffer += data + "\n"
         self.initiate_send()
 
     def handle_line(self, line):
+        match_obj = re.match(self.irc_re, line)
+        match_dict = match_obj.groupdict()
+        match_dict["raw"] = line
         print "From client: {line}".format(line=line)
-        if line[:4] == "USER":
-            self.send("001 {nick} :Hey!\n".format(nick="testbot12"))
+        if match_dict["cmd"] == "USER":
+            user_resp = "001 {nick} :USER command registered!\n".format(nick="testbot12")
+            self.send_line(user_resp)
+
         for username, exchanger in self.exchangers.iteritems():
-            exchanger.send_string(line)
+            exchanger.send_line(line)
 
     def handle_read(self):
         data = self.recv(8192)

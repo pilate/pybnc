@@ -19,7 +19,7 @@ class IRCExchanger(asyncore.dispatcher):
         self.joins = []
         self.server_connect()
 
-    def send_string(self, string):
+    def send_line(self, string):
         if string[:4] == "QUIT":
             return
         self.send_buffer += string + "\n"
@@ -34,11 +34,11 @@ class IRCExchanger(asyncore.dispatcher):
     def handle_connect(self):
         if "pass" in self.settings:
             pass_cmd = "PASS {0}".format(self.settings["pass"])
-            self.send_string(pass_cmd)
+            self.send_line(pass_cmd)
         nick_cmd = "NICK {0}".format(self.settings["nick"])
-        self.send_string(nick_cmd)
+        self.send_line(nick_cmd)
         user_cmd = "USER {user} 8 * :{real_name}".format(**self.settings)
-        self.send_string(user_cmd)
+        self.send_line(user_cmd)
 
     def handle_close(self):
         self.close()
@@ -53,10 +53,8 @@ class IRCExchanger(asyncore.dispatcher):
         if match_dict["cmd"] == "PING":
             pong_cmd = line.replace("PING", "PONG")
             print pong_cmd
-            self.send_string(pong_cmd)
+            self.send_line(pong_cmd)
         else:
-            if match_dict["cmd"] == "JOIN":
-                self.joins.append(match_dict)
             self.client_send(line)
 
     # Receives data from the IRC connection and breaks it into lines
@@ -79,14 +77,10 @@ class IRCExchanger(asyncore.dispatcher):
     # Sends text to registered clients
     def client_send(self, line):
         for client in self.clients:
-            client.send(line)
+            client.send_line(line)
     
     def register_client(self, client):
         self.clients.append(client)
-        for join in self.joins:
-            client.send(join["raw"])
-            names_cmd = "NAMES {chan}".format(chan=join["trail"].strip())
-            self.send_string(names_cmd) 
 
     def writable(self):
         return (len(self.send_buffer) > 0)
