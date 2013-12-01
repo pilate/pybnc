@@ -1,5 +1,7 @@
 import asyncore
+import re
 import socket
+
 from functools import wraps
 
 
@@ -32,18 +34,16 @@ class ClientHandler(asyncore.dispatcher_with_send):
         match_obj = re.match(self.irc_re, line)
         match_dict = match_obj.groupdict()
         match_dict["raw"] = line
-        print "From client: {line}".format(line=line)
-        if match_dict["cmd"] == "USER":
-            user_resp = "001 {nick} :USER command registered!\n".format(nick="testbot12")
-            self.send_line(user_resp)
 
+        print "From client: {line}".format(line=line)
         for username, exchanger in self.exchangers.iteritems():
             exchanger.send_line(line)
 
     def handle_read(self):
         data = self.recv(8192)
         if data:
-            for line in data.split("\n"):
+            lines = data.split("\n")
+            for line in filter(bool, lines):
                 self.handle_line(line)
 
 

@@ -3,6 +3,13 @@ import re
 import socket
 
 
+replay_commands = [
+    # Connection replies
+    "001", "002", "003", "004", "005",
+    # Server info
+    "251", "252", "253", "254", "255"
+]
+
 """
     Class responsible for maintaining an IRC connection
 """
@@ -15,8 +22,8 @@ class IRCExchanger(asyncore.dispatcher):
         self.settings = settings
         self.recv_buffer = ""
         self.send_buffer = ""
+        self.all_replay = []
         self.clients = []
-        self.joins = []
         self.server_connect()
 
     def send_line(self, string):
@@ -55,6 +62,8 @@ class IRCExchanger(asyncore.dispatcher):
             print pong_cmd
             self.send_line(pong_cmd)
         else:
+            if match_dict["cmd"] in replay_commands:
+                self.all_replay.append(match_dict)
             self.client_send(line)
 
     # Receives data from the IRC connection and breaks it into lines
@@ -81,6 +90,8 @@ class IRCExchanger(asyncore.dispatcher):
     
     def register_client(self, client):
         self.clients.append(client)
+        for command in self.all_replay:
+            client.send_line(command["raw"])
 
     def writable(self):
         return (len(self.send_buffer) > 0)
