@@ -19,7 +19,6 @@ class ClientHandler(asyncore.dispatcher_with_send):
 
     def __init__(self, users, exchangers, sock=None):
         asyncore.dispatcher_with_send.__init__(self, sock=sock)
-        self.registered = False
         self.users = users
         self.exchangers = exchangers
         for username, exchanger in self.exchangers.iteritems():
